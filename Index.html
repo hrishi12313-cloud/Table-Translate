@@ -1,0 +1,1318 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="TableTalk">
+<meta name="theme-color" content="#0B0E14">
+<title>TableTalk — Travel Translator</title>
+<style>
+/* ============ TOKENS ============ */
+:root{
+  --bg:#0B0E14; --bg2:#10151F; --surface:#141A24; --surface2:#1B2331;
+  --line:#242E3E; --line2:#2E3A4E;
+  --text:#F2F4F8; --dim:#8B96A8; --faint:#5A6579;
+  --you:#5B9DFF; --you-soft:rgba(91,157,255,.14);
+  --them:#35D0A0; --them-soft:rgba(53,208,160,.13);
+  --danger:#FF6B6B; --danger-soft:rgba(255,107,107,.14);
+  --amber:#FFB454; --amber-soft:rgba(255,180,84,.14);
+  --radius:16px; --radius-sm:11px;
+  --tap:52px;
+  --sat:env(safe-area-inset-top,0px); --sab:env(safe-area-inset-bottom,0px);
+  --mono:ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+[data-theme="light"]{
+  --bg:#F4F6FA; --bg2:#EBEFF5; --surface:#FFFFFF; --surface2:#F0F3F8;
+  --line:#D9E0EA; --line2:#C6CFDD;
+  --text:#141A24; --dim:#5A6579; --faint:#8B96A8;
+  --you:#2B6FE3; --you-soft:rgba(43,111,227,.10);
+  --them:#0E9C74; --them-soft:rgba(14,156,116,.10);
+  --danger:#D93B3B; --danger-soft:rgba(217,59,59,.10);
+  --amber:#B57612; --amber-soft:rgba(181,118,18,.12);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0}
+html,body{height:100%;overscroll-behavior:none}
+body{
+  background:var(--bg); color:var(--text);
+  font:16px/1.45 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;
+  -webkit-font-smoothing:antialiased; touch-action:manipulation;
+  user-select:none; -webkit-user-select:none;
+}
+input,textarea{user-select:text;-webkit-user-select:text}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{
+  outline:2px solid var(--you); outline-offset:2px;
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}
+
+/* ============ SHELL ============ */
+#app{height:100dvh;display:flex;flex-direction:column;overflow:hidden}
+header#topbar{
+  padding:calc(var(--sat) + 8px) 14px 8px;
+  display:flex;align-items:center;gap:10px;
+  background:var(--bg); border-bottom:1px solid var(--line);
+  flex:0 0 auto; z-index:5;
+}
+.brand{font-weight:800;font-size:17px;letter-spacing:-.02em}
+.brand .tt{color:var(--them)}
+.micro{font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--faint)}
+#netpill{
+  margin-left:auto;display:flex;align-items:center;gap:6px;
+  font-size:12px;font-weight:700;color:var(--dim);
+  padding:5px 10px;border-radius:999px;background:var(--surface);border:1px solid var(--line);
+}
+#netdot{width:8px;height:8px;border-radius:50%;background:var(--them)}
+#netpill.off #netdot{background:var(--amber)}
+#themeBtn{width:36px;height:36px;border-radius:10px;background:var(--surface);border:1px solid var(--line);font-size:16px}
+
+main#views{flex:1 1 auto;min-height:0;position:relative}
+.view{position:absolute;inset:0;display:none;flex-direction:column;overflow:hidden}
+.view.active{display:flex}
+.scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px 14px calc(14px + var(--sab))}
+
+/* ============ TAB BAR ============ */
+nav#tabbar{
+  flex:0 0 auto;display:flex;background:var(--bg2);
+  border-top:1px solid var(--line);
+  padding:6px 6px calc(6px + var(--sab));
+}
+nav#tabbar button{
+  flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;
+  padding:7px 2px;border-radius:12px;color:var(--faint);
+  font-size:10.5px;font-weight:700;letter-spacing:.04em;
+  min-height:var(--tap);
+}
+nav#tabbar button .ic{font-size:21px;line-height:1}
+nav#tabbar button.on{color:var(--text);background:var(--surface)}
+nav#tabbar button.on .ic{transform:scale(1.05)}
+
+/* ============ TALK: THE DUET ============ */
+#view-talk{background:var(--bg)}
+.duet{flex:1;min-height:0;display:flex;flex-direction:column}
+.side{
+  flex:1;min-height:0;display:flex;flex-direction:column;
+  padding:10px 14px;overflow:hidden;position:relative;
+}
+.side.you{background:linear-gradient(180deg,var(--you-soft),transparent 55%)}
+.side.them{background:linear-gradient(180deg,var(--them-soft),transparent 55%);transform:rotate(180deg)}
+.side-head{display:flex;align-items:center;gap:8px;flex:0 0 auto}
+.side-lang{
+  font-size:13px;font-weight:800;padding:7px 12px;border-radius:999px;
+  border:1.5px solid var(--line2);background:var(--surface);min-height:36px;
+  display:flex;align-items:center;gap:6px;
+}
+.side.you .side-lang{border-color:var(--you)}
+.side.them .side-lang{border-color:var(--them)}
+.turnTag{
+  font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;
+  padding:4px 9px;border-radius:999px;display:none;
+}
+.side.speaking .turnTag{display:inline-block}
+.side.you .turnTag{background:var(--you);color:#fff}
+.side.them .turnTag{background:var(--them);color:#04231A}
+.side-body{flex:1;min-height:0;display:flex;flex-direction:column;justify-content:center;overflow-y:auto;padding:6px 2px}
+.bigline{
+  font-size:clamp(22px,6.4vw,34px);font-weight:800;line-height:1.22;letter-spacing:-.015em;
+  overflow-wrap:anywhere;
+}
+.subline{margin-top:7px;font-size:14.5px;color:var(--dim);overflow-wrap:anywhere}
+.romline{margin-top:5px;font-family:var(--mono);font-size:13.5px;color:var(--faint);overflow-wrap:anywhere}
+.side-empty{color:var(--faint);font-size:14px;text-align:center}
+.interim .bigline{color:var(--dim);font-weight:600;font-style:italic}
+.side-tools{display:flex;gap:8px;flex:0 0 auto;padding-top:4px}
+.chipbtn{
+  min-height:38px;padding:7px 13px;border-radius:999px;font-size:13px;font-weight:700;
+  background:var(--surface);border:1px solid var(--line2);color:var(--text);
+  display:inline-flex;align-items:center;gap:6px;
+}
+.chipbtn:active{transform:scale(.96)}
+.chipbtn.accent-you{border-color:var(--you);color:var(--you)}
+.chipbtn.accent-them{border-color:var(--them);color:var(--them)}
+
+/* ---- center seam ---- */
+.seam{
+  flex:0 0 auto;position:relative;z-index:4;
+  background:var(--bg2);border-top:1px solid var(--line);border-bottom:1px solid var(--line);
+  padding:8px 10px;display:flex;flex-direction:column;gap:8px;
+}
+.seam-row{display:flex;align-items:center;justify-content:center;gap:10px}
+.seambtn{
+  min-width:var(--tap);min-height:var(--tap);border-radius:15px;
+  background:var(--surface);border:1px solid var(--line2);
+  font-size:12px;font-weight:800;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;
+  padding:4px 10px;color:var(--dim);
+}
+.seambtn .ic{font-size:19px;color:var(--text)}
+.seambtn:active{transform:scale(.95)}
+.seambtn.lit{border-color:var(--you);color:var(--you);background:var(--you-soft)}
+.seambtn.lit .ic{color:var(--you)}
+#micBtn{
+  width:76px;height:76px;border-radius:50%;flex:0 0 auto;
+  background:var(--surface);border:2px solid var(--line2);
+  font-size:30px;display:flex;align-items:center;justify-content:center;
+  position:relative;
+}
+#micBtn.armed{border-color:var(--danger);background:var(--danger-soft)}
+#micBtn.armed::after{
+  content:"";position:absolute;inset:-7px;border-radius:50%;
+  border:2px solid var(--danger);opacity:.55;animation:pulse 1.4s ease-out infinite;
+}
+@keyframes pulse{0%{transform:scale(.92);opacity:.55}100%{transform:scale(1.18);opacity:0}}
+#pttBtn{
+  min-height:var(--tap);border-radius:15px;padding:6px 14px;
+  background:var(--surface);border:1px solid var(--line2);
+  font-size:12px;font-weight:800;color:var(--dim);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+}
+#pttBtn .ic{font-size:19px;color:var(--text)}
+#pttBtn.holding{border-color:var(--danger);background:var(--danger-soft);color:var(--danger)}
+#talkStatus{
+  text-align:center;font-size:12.5px;font-weight:600;color:var(--dim);
+  min-height:17px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+#talkStatus.err{color:var(--danger)} #talkStatus.warn{color:var(--amber)}
+.seam-type{display:flex;gap:8px}
+.seam-type input{
+  flex:1;min-height:46px;border-radius:13px;padding:10px 14px;font-size:16px;
+  background:var(--surface);border:1px solid var(--line2);color:var(--text);
+}
+.seam-type input::placeholder{color:var(--faint)}
+.seam-type button{
+  min-width:64px;min-height:46px;border-radius:13px;font-weight:800;font-size:14px;
+  background:var(--you);color:#fff;
+}
+.seam-type button:disabled{opacity:.45}
+
+/* ============ SHOW THEM OVERLAY ============ */
+#showThem{
+  position:fixed;inset:0;z-index:60;display:none;flex-direction:column;
+  background:var(--bg);padding:calc(var(--sat) + 12px) 18px calc(var(--sab) + 12px);
+}
+#showThem.open{display:flex}
+#showThem .st-body{flex:1;display:flex;flex-direction:column;justify-content:center;overflow-y:auto}
+#stText{font-size:clamp(38px,11vw,72px);font-weight:800;line-height:1.18;letter-spacing:-.02em;overflow-wrap:anywhere}
+#stRom{margin-top:14px;font-family:var(--mono);font-size:clamp(16px,4.5vw,24px);color:var(--dim);overflow-wrap:anywhere}
+#showThem.flipped .st-body{transform:rotate(180deg)}
+#showThem .st-bar{display:flex;gap:10px;flex:0 0 auto;padding-top:10px}
+#showThem .st-bar button{
+  flex:1;min-height:56px;border-radius:16px;font-size:15px;font-weight:800;
+  background:var(--surface);border:1px solid var(--line2);
+}
+#showThem .st-bar button.primary{background:var(--them);color:#04231A;border:0}
+
+/* ============ CARDS & SECTIONS ============ */
+.card{
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+  padding:14px;margin-bottom:12px;
+}
+.card h3{font-size:15px;font-weight:800;margin-bottom:8px;letter-spacing:-.01em}
+.card .note{font-size:13px;color:var(--dim);line-height:1.5}
+.sectionTitle{
+  font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--faint);margin:16px 2px 8px;
+}
+.row{display:flex;align-items:center;gap:10px}
+.grow{flex:1;min-width:0}
+
+/* ============ FORMS ============ */
+.field{margin-bottom:12px}
+.field label{display:block;font-size:12.5px;font-weight:700;color:var(--dim);margin-bottom:5px}
+.field input,.field select,.field textarea{
+  width:100%;min-height:48px;border-radius:var(--radius-sm);padding:11px 13px;
+  background:var(--bg2);border:1px solid var(--line2);color:var(--text);font-size:16px;
+  -webkit-appearance:none;appearance:none;
+}
+.field textarea{min-height:70px;resize:vertical}
+.hint{font-size:12px;color:var(--faint);margin-top:4px;line-height:1.45}
+.btn{
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  min-height:50px;border-radius:14px;font-size:15px;font-weight:800;
+  background:var(--surface2);border:1px solid var(--line2);width:100%;
+}
+.btn:active{transform:scale(.98)}
+.btn.primary{background:var(--you);color:#fff;border:0}
+.btn.good{background:var(--them);color:#04231A;border:0}
+.btn.bad{background:var(--danger-soft);color:var(--danger);border:1px solid var(--danger)}
+.btn.slim{min-height:44px;font-size:14px}
+.switchRow{
+  display:flex;align-items:center;gap:10px;padding:11px 2px;
+  border-bottom:1px solid var(--line);min-height:52px;
+}
+.switchRow:last-child{border-bottom:0}
+.switchRow .lbl{flex:1}
+.switchRow .lbl b{display:block;font-size:14.5px;font-weight:700}
+.switchRow .lbl span{font-size:12px;color:var(--faint);line-height:1.4;display:block;margin-top:1px}
+.toggle{position:relative;width:52px;height:31px;flex:0 0 auto}
+.toggle input{position:absolute;opacity:0;width:100%;height:100%;z-index:2;cursor:pointer}
+.toggle .knob{
+  position:absolute;inset:0;border-radius:999px;background:var(--line2);transition:background .18s;
+}
+.toggle .knob::after{
+  content:"";position:absolute;top:3px;left:3px;width:25px;height:25px;border-radius:50%;
+  background:#fff;transition:transform .18s;box-shadow:0 1px 3px rgba(0,0,0,.35);
+}
+.toggle input:checked + .knob{background:var(--them)}
+.toggle input:checked + .knob::after{transform:translateX(21px)}
+.seg{display:flex;background:var(--bg2);border:1px solid var(--line2);border-radius:12px;padding:3px;gap:3px}
+.seg button{
+  flex:1;min-height:40px;border-radius:9px;font-size:13.5px;font-weight:700;color:var(--dim);
+}
+.seg button.on{background:var(--surface);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.25)}
+
+/* ============ PHRASEBOOK ============ */
+.catRow{
+  display:flex;gap:8px;overflow-x:auto;-webkit-overflow-scrolling:touch;
+  padding:10px 14px 8px;flex:0 0 auto;scrollbar-width:none;
+}
+.catRow::-webkit-scrollbar{display:none}
+.catChip{
+  flex:0 0 auto;min-height:40px;padding:8px 15px;border-radius:999px;
+  background:var(--surface);border:1px solid var(--line2);font-size:13.5px;font-weight:700;color:var(--dim);
+  white-space:nowrap;
+}
+.catChip.on{background:var(--them-soft);border-color:var(--them);color:var(--them)}
+.catChip.sos{border-color:var(--danger);color:var(--danger)}
+.catChip.sos.on{background:var(--danger-soft)}
+.phrase{
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+  padding:12px 13px;margin-bottom:9px;display:flex;gap:10px;align-items:center;
+}
+.phrase .p-src{font-size:13.5px;color:var(--dim)}
+.phrase .p-tr{font-size:19px;font-weight:800;margin-top:2px;overflow-wrap:anywhere}
+.phrase .p-rom{font-family:var(--mono);font-size:12.5px;color:var(--faint);margin-top:2px;overflow-wrap:anywhere}
+.iconbtn{
+  width:46px;height:46px;border-radius:13px;flex:0 0 auto;font-size:19px;
+  background:var(--bg2);border:1px solid var(--line2);
+  display:flex;align-items:center;justify-content:center;
+}
+.iconbtn:active{transform:scale(.93)}
+.iconbtn.starred{color:var(--amber);border-color:var(--amber)}
+.searchbar{padding:0 14px 4px;flex:0 0 auto}
+.searchbar input{
+  width:100%;min-height:46px;border-radius:13px;padding:10px 14px;font-size:16px;
+  background:var(--surface);border:1px solid var(--line2);color:var(--text);
+}
+
+/* ============ TOOLS ============ */
+.sosBig{
+  width:100%;min-height:64px;border-radius:16px;margin-bottom:10px;
+  background:var(--danger-soft);border:1.5px solid var(--danger);
+  display:flex;align-items:center;gap:12px;padding:10px 15px;text-align:left;
+}
+.sosBig .s1{font-size:16.5px;font-weight:800;color:var(--danger)}
+.sosBig .s2{font-size:13px;color:var(--dim);margin-top:1px}
+.numRow{display:flex;gap:9px;margin-bottom:10px}
+.numRow a{
+  flex:1;text-decoration:none;color:var(--text);background:var(--surface);
+  border:1px solid var(--line2);border-radius:14px;padding:11px;text-align:center;
+}
+.numRow a b{display:block;font-size:20px;font-weight:800}
+.numRow a span{font-size:11.5px;color:var(--dim)}
+.fx-out{
+  display:flex;justify-content:space-between;align-items:baseline;
+  padding:12px 2px;border-bottom:1px solid var(--line);
+}
+.fx-out:last-child{border-bottom:0}
+.fx-out .v{font-size:22px;font-weight:800;font-variant-numeric:tabular-nums}
+.fx-out .u{font-size:12.5px;color:var(--dim);font-weight:700}
+
+/* ============ HISTORY ============ */
+.hitem{
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+  padding:12px 13px;margin-bottom:9px;
+}
+.hitem .h-src{font-size:13.5px;color:var(--dim);overflow-wrap:anywhere}
+.hitem .h-tr{font-size:17px;font-weight:800;margin-top:3px;overflow-wrap:anywhere}
+.hitem .h-rom{font-family:var(--mono);font-size:12px;color:var(--faint);margin-top:2px;overflow-wrap:anywhere}
+.hitem .h-meta{font-size:11px;color:var(--faint);margin-top:6px;display:flex;gap:8px;align-items:center}
+.hitem .h-bar{display:flex;gap:8px;margin-top:8px}
+.empty{color:var(--faint);text-align:center;padding:34px 20px;font-size:14px;line-height:1.6}
+
+/* ============ MODAL ============ */
+.modal{
+  position:fixed;inset:0;z-index:70;display:none;align-items:flex-end;justify-content:center;
+  background:rgba(4,7,12,.66);backdrop-filter:blur(3px);
+}
+.modal.open{display:flex}
+.sheet{
+  width:100%;max-width:560px;background:var(--surface);
+  border-radius:22px 22px 0 0;padding:18px 16px calc(16px + var(--sab));
+  border:1px solid var(--line2);border-bottom:0;max-height:82dvh;overflow-y:auto;
+}
+.sheet h3{font-size:17px;font-weight:800;margin-bottom:10px}
+.sheet .bar{display:flex;gap:10px;margin-top:12px}
+#toast{
+  position:fixed;left:50%;bottom:calc(var(--sab) + 86px);transform:translateX(-50%) translateY(8px);
+  background:var(--surface2);border:1px solid var(--line2);color:var(--text);
+  padding:10px 16px;border-radius:999px;font-size:13.5px;font-weight:700;
+  opacity:0;pointer-events:none;transition:.22s;z-index:90;max-width:88vw;text-align:center;
+}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.explainCard{background:var(--bg2);border:1px dashed var(--line2);border-radius:12px;padding:10px 12px;margin-top:8px}
+.explainCard .xr{font-size:13px;line-height:1.5;color:var(--dim);margin-bottom:4px}
+.explainCard .xr b{color:var(--text)}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <header id="topbar">
+    <div>
+      <div class="brand">Table<span class="tt">Talk</span></div>
+    </div>
+    <div id="netpill"><span id="netdot"></span><span id="netlabel">Online</span></div>
+    <button id="themeBtn" aria-label="Switch theme">☾</button>
+  </header>
+
+  <main id="views">
+
+    <!-- ================= TALK ================= -->
+    <section class="view active" id="view-talk">
+      <div class="duet">
+
+        <!-- YOUR SIDE (top, faces you) -->
+        <div class="side you" id="sideA">
+          <div class="side-head">
+            <button class="side-lang" id="langBtnA">English</button>
+            <span class="turnTag">Listening</span>
+          </div>
+          <div class="side-body" id="bodyA">
+            <div class="side-empty">Your side. What they say arrives here in your language.</div>
+          </div>
+          <div class="side-tools">
+            <button class="chipbtn accent-you" id="replayA">🔊 Replay</button>
+            <button class="chipbtn" id="slowA">🐢 Slow</button>
+            <button class="chipbtn" id="explainBtn">✦ Explain</button>
+          </div>
+        </div>
+
+        <!-- SEAM: shared controls -->
+        <div class="seam">
+          <div id="talkStatus">Tap the mic to start listening</div>
+          <div class="seam-row">
+            <button class="seambtn" id="speakerToggle"><span class="ic">🗣</span><span id="speakerLabel">You speak</span></button>
+            <button class="seambtn" id="swapBtn"><span class="ic">⇅</span><span>Swap</span></button>
+            <button id="micBtn" aria-label="Start or stop listening">🎙</button>
+            <button id="pttBtn"><span class="ic">✊</span><span>Hold to talk</span></button>
+            <button class="seambtn" id="showThemBtn"><span class="ic">⤢</span><span>Show them</span></button>
+          </div>
+          <div class="seam-type">
+            <input id="typeInput" type="text" placeholder="Or type here…" enterkeyhint="send" autocomplete="off">
+            <button id="typeSend">Go</button>
+          </div>
+        </div>
+
+        <!-- THEIR SIDE (bottom (rotated 180°, faces across the table) -->
+        <div class="side them" id="sideB">
+          <div class="side-head">
+            <button class="side-lang" id="langBtnB">中文 · Mandarin</button>
+            <span class="turnTag">Listening</span>
+          </div>
+          <div class="side-body" id="bodyB">
+            <div class="side-empty">他们的一侧 · Their side<br>Translations appear here, facing them.</div>
+          </div>
+          <div class="side-tools">
+            <button class="chipbtn accent-them" id="replayB">🔊 Replay</button>
+            <button class="chipbtn" id="slowB">🐢 Slow</button>
+            <button class="chipbtn" id="micToB">🎙 They speak</button>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ================= PHRASEBOOK ================= -->
+    <section class="view" id="view-phrases">
+      <div class="searchbar" style="padding-top:12px">
+        <input id="phraseSearch" type="search" placeholder="Search phrases… (works offline)">
+      </div>
+      <div class="catRow" id="catRow"></div>
+      <div class="scroll" id="phraseList"></div>
+    </section>
+
+    <!-- ================= TOOLS ================= -->
+    <section class="view" id="view-tools">
+      <div class="scroll">
+
+        <div class="sectionTitle">Emergency — one tap, full screen</div>
+        <div id="sosButtons"></div>
+
+        <div class="sectionTitle">Emergency numbers</div>
+        <div class="card">
+          <div class="numRow" id="sosNums"></div>
+          <div class="field"><label>Local emergency numbers (editable)</label>
+            <input id="localSOS" type="text" placeholder="e.g. Police 110 · Ambulance 120 · Fire 119">
+          </div>
+          <div class="field"><label>My emergency contact</label>
+            <input id="myContact" type="text" placeholder="Name · +91 …">
+          </div>
+          <div class="hint">Saved on this phone only. Tap a number card to dial.</div>
+        </div>
+
+        <div class="sectionTitle">Currency converter — works offline</div>
+        <div class="card">
+          <div class="row" style="margin-bottom:10px">
+            <div class="field grow" style="margin:0"><label id="fxFromLbl">Amount (CNY ¥)</label>
+              <input id="fxAmount" type="number" inputmode="decimal" placeholder="0">
+            </div>
+            <button class="iconbtn" id="fxSwap" aria-label="Swap currencies" style="margin-top:18px">⇄</button>
+          </div>
+          <div class="field"><label id="fxRateLbl">Rate: 1 CNY = ? INR (edit anytime)</label>
+            <input id="fxRate" type="number" inputmode="decimal" step="0.0001">
+          </div>
+          <div id="fxResults"></div>
+          <div class="hint" id="fxStamp">Uses the last rate you entered — no internet needed.</div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ================= SAVED ================= -->
+    <section class="view" id="view-saved">
+      <div class="searchbar" style="padding-top:12px">
+        <input id="histSearch" type="search" placeholder="Search history & favorites…">
+      </div>
+      <div style="padding:8px 14px 0">
+        <div class="seg" id="savedSeg">
+          <button data-seg="fav" class="on">★ Favorites</button>
+          <button data-seg="hist">History</button>
+        </div>
+      </div>
+      <div class="scroll" id="savedList"></div>
+    </section>
+
+    <!-- ================= SETUP ================= -->
+    <section class="view" id="view-setup">
+      <div class="scroll">
+
+        <div class="sectionTitle">Translation engine</div>
+        <div class="card">
+          <div class="field"><label>API endpoint (chat completions)</label>
+            <input id="setEndpoint" type="url" placeholder="https://api.openai.com/v1/chat/completions">
+            <div class="hint">Any OpenAI-compatible chat endpoint works: OpenAI, OpenRouter, Groq, DeepSeek, a local server…</div>
+          </div>
+          <div class="field"><label>API key</label>
+            <input id="setKey" type="password" placeholder="sk-…" autocomplete="off">
+          </div>
+          <div class="field"><label>Model</label>
+            <input id="setModel" type="text" placeholder="gpt-4o-mini">
+          </div>
+          <button class="btn slim" id="testApi">Test connection</button>
+          <div class="hint" id="testResult"></div>
+        </div>
+
+        <div class="sectionTitle">Style</div>
+        <div class="card">
+          <div class="field"><label>Register / formality</label>
+            <div class="seg" id="formalSeg">
+              <button data-v="casual">Casual</button>
+              <button data-v="polite" class="on">Polite</button>
+            </div>
+            <div class="hint">Applied where the language distinguishes register (e.g. 您 vs 你, tu vs vous).</div>
+          </div>
+          <div class="switchRow">
+            <div class="lbl"><b>Explain mode</b><span>Adds a literal gloss + one-line cultural note to each translation.</span></div>
+            <div class="toggle"><input type="checkbox" id="setExplain"><span class="knob"></span></div>
+          </div>
+        </div>
+
+        <div class="sectionTitle">Conversation behavior</div>
+        <div class="card">
+          <div class="switchRow">
+            <div class="lbl"><b>Auto-switch speaker</b><span>After each utterance, flip to the other side automatically.</span></div>
+            <div class="toggle"><input type="checkbox" id="setAutoSwitch"><span class="knob"></span></div>
+          </div>
+          <div class="switchRow">
+            <div class="lbl"><b>Auto-detect language</b><span>The engine figures out which side spoke and translates the other way. Handy, slightly slower.</span></div>
+            <div class="toggle"><input type="checkbox" id="setAutoDetect"><span class="knob"></span></div>
+          </div>
+          <div class="switchRow">
+            <div class="lbl"><b>Review before translating</b><span>Show what the mic heard and let you edit before sending.</span></div>
+            <div class="toggle"><input type="checkbox" id="setReview"><span class="knob"></span></div>
+          </div>
+          <div class="switchRow">
+            <div class="lbl"><b>Speak translations aloud</b><span>Reads each translation with the phone's built-in voices (works offline).</span></div>
+            <div class="toggle"><input type="checkbox" id="setSpeak" checked><span class="knob"></span></div>
+          </div>
+        </div>
+
+        <div class="sectionTitle">Data</div>
+        <div class="card">
+          <div class="note" style="margin-bottom:10px">
+            <b>Private by design.</b> Everything — history, favorites, keys, cache — lives in this phone's local storage.
+            No analytics, no tracking, no account, no ads, no limits. The only network call this app ever makes is to
+            the translation API <i>you</i> configured above.
+          </div>
+          <div class="row" style="gap:8px">
+            <button class="btn slim grow" id="clearCache">Clear translation cache</button>
+            <button class="btn slim bad grow" id="clearAll">Erase everything</button>
+          </div>
+          <div class="hint" id="storageInfo" style="margin-top:8px"></div>
+        </div>
+
+        <div class="sectionTitle">Offline — what works without internet</div>
+        <div class="card">
+          <div class="note">
+            ✅ Phrasebook, favorites, history, every <i>cached</i> translation, text-to-speech, currency converter, emergency screen.<br><br>
+            ⚠️ Needs internet: live speech recognition (Apple processes audio server-side) and <i>new</i> translations.
+            The status pill up top always tells you which mode you're in.<br><br>
+            💡 Tip: before going offline, translate the sentences you expect to need — they'll be cached and instant.
+          </div>
+        </div>
+
+        <div class="sectionTitle">Install on iPhone</div>
+        <div class="card">
+          <div class="note">Open this file in Safari → Share → <b>Add to Home Screen</b>. It launches full-screen like a native app. Mic input requires HTTPS or a Home-Screen install; if the mic button says recognition is unavailable, use Hold-to-talk from a hosted copy or the typed input, phrasebook and cache — they always work.</div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <nav id="tabbar">
+    <button data-view="talk" class="on"><span class="ic">💬</span>Talk</button>
+    <button data-view="phrases"><span class="ic">📖</span>Phrases</button>
+    <button data-view="tools"><span class="ic">🧭</span>Tools</button>
+    <button data-view="saved"><span class="ic">★</span>Saved</button>
+    <button data-view="setup"><span class="ic">⚙︎</span>Setup</button>
+  </nav>
+</div>
+
+<!-- SHOW THEM -->
+<div id="showThem">
+  <div class="st-body">
+    <div id="stText"></div>
+    <div id="stRom"></div>
+  </div>
+  <div class="st-bar">
+    <button id="stFlip">⟲ Flip 180°</button>
+    <button id="stSpeak">🔊 Speak</button>
+    <button class="primary" id="stClose">Done</button>
+  </div>
+</div>
+
+<!-- LANGUAGE PICKER -->
+<div class="modal" id="langModal">
+  <div class="sheet">
+    <h3 id="langModalTitle">Choose language</h3>
+    <div id="langList"></div>
+  </div>
+</div>
+
+<!-- REVIEW BEFORE SEND -->
+<div class="modal" id="reviewModal">
+  <div class="sheet">
+    <h3>Heard this — edit if needed</h3>
+    <div class="field"><textarea id="reviewText"></textarea></div>
+    <div class="bar">
+      <button class="btn" id="reviewCancel">Discard</button>
+      <button class="btn primary" id="reviewSend">Translate</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD CUSTOM PHRASE -->
+<div class="modal" id="addPhraseModal">
+  <div class="sheet">
+    <h3>Add your own phrase</h3>
+    <div class="field"><label>Phrase (your language)</label><input id="apSrc" type="text"></div>
+    <div class="field"><label>Translation</label><input id="apTr" type="text"></div>
+    <div class="field"><label>Pronunciation / pinyin (optional)</label><input id="apRom" type="text"></div>
+    <div class="bar">
+      <button class="btn" id="apCancel">Cancel</button>
+      <button class="btn good" id="apSave">Save phrase</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+<script>
+"use strict";
+(function(){
+
+/* ================= UTIL & STORE ================= */
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const store={
+  get(k,d){ try{const v=localStorage.getItem("tt_"+k); return v==null?d:JSON.parse(v);}catch(e){return d;} },
+  set(k,v){ try{localStorage.setItem("tt_"+k,JSON.stringify(v)); return true;}catch(e){toast("Storage full — clear cache in Setup"); return false;} },
+  del(k){ localStorage.removeItem("tt_"+k); }
+};
+function toast(msg,ms=2200){ const t=$("#toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove("show"),ms); }
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const norm=s=>String(s||"").trim().replace(/\s+/g," ");
+
+/* ================= LANGUAGES ================= */
+const LANGS=[
+  {code:"en-US",name:"English",native:"English",tts:"en"},
+  {code:"zh-CN",name:"Mandarin",native:"中文",tts:"zh-CN",rom:"pinyin"},
+  {code:"zh-HK",name:"Cantonese",native:"廣東話",tts:"zh-HK",rom:"jyutping"},
+  {code:"hi-IN",name:"Hindi",native:"हिन्दी",tts:"hi",rom:"latin"},
+  {code:"ja-JP",name:"Japanese",native:"日本語",tts:"ja",rom:"romaji"},
+  {code:"ko-KR",name:"Korean",native:"한국어",tts:"ko",rom:"romanization"},
+  {code:"th-TH",name:"Thai",native:"ไทย",tts:"th",rom:"latin"},
+  {code:"vi-VN",name:"Vietnamese",native:"Tiếng Việt",tts:"vi"},
+  {code:"id-ID",name:"Indonesian",native:"Bahasa",tts:"id"},
+  {code:"es-ES",name:"Spanish",native:"Español",tts:"es"},
+  {code:"fr-FR",name:"French",native:"Français",tts:"fr"},
+  {code:"de-DE",name:"German",native:"Deutsch",tts:"de"},
+  {code:"it-IT",name:"Italian",native:"Italiano",tts:"it"},
+  {code:"pt-BR",name:"Portuguese",native:"Português",tts:"pt"},
+  {code:"ru-RU",name:"Russian",native:"Русский",tts:"ru",rom:"latin"},
+  {code:"ar-SA",name:"Arabic",native:"العربية",tts:"ar",rom:"latin"},
+  {code:"tr-TR",name:"Turkish",native:"Türkçe",tts:"tr"},
+];
+const langBy=c=>LANGS.find(l=>l.code===c)||LANGS[0];
+
+/* ================= SETTINGS ================= */
+const DEF={
+  endpoint:"https://api.openai.com/v1/chat/completions", key:"", model:"gpt-4o-mini",
+  formality:"polite", explain:false, autoSwitch:false, autoDetect:false, review:false, speak:true,
+  langA:"en-US", langB:"zh-CN", theme:"dark",
+  fxFrom:"CNY", fxTo:"INR", fxRate:12.0, fxStamp:0,
+  localSOS:"Police 110 · Ambulance 120 · Fire 119", myContact:""
+};
+let S=Object.assign({},DEF,store.get("settings",{}));
+function saveS(){ store.set("settings",S); }
+
+/* ================= BUILT-IN PHRASEBOOK (EN ⇄ Mandarin, pinyin) ================= */
+const PHRASES=[
+["greet","Greetings & basics",[
+ ["Hello","你好","nǐ hǎo"],
+ ["Thank you","谢谢","xièxie"],
+ ["Please","请","qǐng"],
+ ["Excuse me / sorry","不好意思","bù hǎo yìsi"],
+ ["Yes","是的","shì de"],
+ ["No","不是","bú shì"],
+ ["I don't understand","我听不懂","wǒ tīng bu dǒng"],
+ ["Please say it slowly","请说慢一点","qǐng shuō màn yìdiǎn"],
+ ["Do you speak English?","你会说英语吗？","nǐ huì shuō yīngyǔ ma?"],
+ ["I'm from India","我来自印度","wǒ láizì Yìndù"],
+ ["Goodbye","再见","zàijiàn"],
+]],
+["sos","Emergencies",[
+ ["Help!","救命！","jiùmìng!"],
+ ["Call the police, please","请报警","qǐng bàojǐng"],
+ ["Call an ambulance, please","请叫救护车","qǐng jiào jiùhùchē"],
+ ["It's an emergency","这是紧急情况","zhè shì jǐnjí qíngkuàng"],
+ ["I'm lost","我迷路了","wǒ mílù le"],
+ ["I lost my passport","我的护照丢了","wǒ de hùzhào diū le"],
+ ["My phone was stolen","我的手机被偷了","wǒ de shǒujī bèi tōu le"],
+ ["Where is the police station?","警察局在哪里？","jǐngchájú zài nǎlǐ?"],
+ ["Please help me","请帮帮我","qǐng bāngbang wǒ"],
+]],
+["med","Medical & allergies",[
+ ["I need a doctor","我需要看医生","wǒ xūyào kàn yīshēng"],
+ ["Where is the hospital?","医院在哪里？","yīyuàn zài nǎlǐ?"],
+ ["Where is a pharmacy?","药店在哪里？","yàodiàn zài nǎlǐ?"],
+ ["I'm allergic to peanuts","我对花生过敏","wǒ duì huāshēng guòmǐn"],
+ ["I'm allergic to seafood","我对海鲜过敏","wǒ duì hǎixiān guòmǐn"],
+ ["I have a fever","我发烧了","wǒ fāshāo le"],
+ ["It hurts here","这里疼","zhèlǐ téng"],
+ ["I take this medicine","我在吃这种药","wǒ zài chī zhè zhǒng yào"],
+ ["I feel dizzy","我头晕","wǒ tóuyūn"],
+]],
+["food","Food & dietary",[
+ ["I'm vegetarian","我吃素","wǒ chī sù"],
+ ["No meat, please","请不要放肉","qǐng bú yào fàng ròu"],
+ ["Not spicy, please","请不要辣","qǐng bú yào là"],
+ ["A little spicy is fine","微辣就好","wēi là jiù hǎo"],
+ ["No MSG, please","请不要放味精","qǐng bú yào fàng wèijīng"],
+ ["Menu, please","请给我菜单","qǐng gěi wǒ càidān"],
+ ["Water, please","请给我水","qǐng gěi wǒ shuǐ"],
+ ["The bill, please","买单","mǎidān"],
+ ["Delicious!","好吃！","hǎochī!"],
+ ["What do you recommend?","你推荐什么？","nǐ tuījiàn shénme?"],
+]],
+["dir","Directions & transport",[
+ ["Where is the toilet?","洗手间在哪里？","xǐshǒujiān zài nǎlǐ?"],
+ ["Where is the train station?","火车站在哪里？","huǒchēzhàn zài nǎlǐ?"],
+ ["Where is the metro?","地铁站在哪里？","dìtiě zhàn zài nǎlǐ?"],
+ ["To the airport, please","请去机场","qǐng qù jīchǎng"],
+ ["Please take me to this address","请带我去这个地址","qǐng dài wǒ qù zhège dìzhǐ"],
+ ["How much to go there?","去那里多少钱？","qù nàlǐ duōshǎo qián?"],
+ ["Turn left","左转","zuǒ zhuǎn"],
+ ["Turn right","右转","yòu zhuǎn"],
+ ["Stop here, please","请在这里停","qǐng zài zhèlǐ tíng"],
+]],
+["hotel","Hotel & check-in",[
+ ["I have a reservation","我有预订","wǒ yǒu yùdìng"],
+ ["I'd like to check in","我要办理入住","wǒ yào bànlǐ rùzhù"],
+ ["I'd like to check out","我要退房","wǒ yào tuìfáng"],
+ ["What's the Wi-Fi password?","Wi-Fi 密码是什么？","Wi-Fi mìmǎ shì shénme?"],
+ ["Can I store my luggage?","可以寄存行李吗？","kěyǐ jìcún xíngli ma?"],
+ ["The air conditioning isn't working","空调坏了","kōngtiáo huài le"],
+ ["Can I have the room cleaned?","可以打扫房间吗？","kěyǐ dǎsǎo fángjiān ma?"],
+ ["One more night, please","再住一晚","zài zhù yì wǎn"],
+]],
+["shop","Shopping & bargaining",[
+ ["How much is this?","这个多少钱？","zhège duōshǎo qián?"],
+ ["Too expensive!","太贵了！","tài guì le!"],
+ ["Can you make it cheaper?","便宜一点可以吗？","piányi yìdiǎn kěyǐ ma?"],
+ ["I'll take it","我要这个","wǒ yào zhège"],
+ ["I'm just looking","我只是看看","wǒ zhǐshì kànkan"],
+ ["Can I pay by card?","可以刷卡吗？","kěyǐ shuākǎ ma?"],
+ ["Can I use WeChat Pay / Alipay?","可以用微信或支付宝吗？","kěyǐ yòng Wēixìn huò Zhīfùbǎo ma?"],
+ ["Receipt, please","请给我发票","qǐng gěi wǒ fāpiào"],
+ ["Do you have a bigger size?","有大一点的吗？","yǒu dà yìdiǎn de ma?"],
+]],
+["num","Numbers & money",[
+ ["1 · 2 · 3","一 · 二 · 三","yī · èr · sān"],
+ ["4 · 5 · 6","四 · 五 · 六","sì · wǔ · liù"],
+ ["7 · 8 · 9 · 10","七 · 八 · 九 · 十","qī · bā · jiǔ · shí"],
+ ["100","一百","yìbǎi"],
+ ["1000","一千","yìqiān"],
+ ["Money","钱","qián"],
+ ["Cash","现金","xiànjīn"],
+ ["Cheap / expensive","便宜 / 贵","piányi / guì"],
+ ["Write the price, please","请把价格写下来","qǐng bǎ jiàgé xiě xiàlái"],
+]],
+];
+
+/* ================= NETWORK STATUS ================= */
+function updateNet(){
+  const on=navigator.onLine;
+  $("#netpill").classList.toggle("off",!on);
+  $("#netlabel").textContent=on?"Online":"Offline";
+  if(!on) toast("Offline — phrasebook, cache & TTS still work",2600);
+}
+addEventListener("online",updateNet); addEventListener("offline",updateNet);
+
+/* ================= THEME & TABS ================= */
+function applyTheme(){ document.documentElement.dataset.theme=S.theme; $("#themeBtn").textContent=S.theme==="dark"?"☀︎":"☾";
+  const m=document.querySelector('meta[name="theme-color"]'); if(m) m.content=S.theme==="dark"?"#0B0E14":"#F4F6FA"; }
+$("#themeBtn").onclick=()=>{ S.theme=S.theme==="dark"?"light":"dark"; saveS(); applyTheme(); };
+$$("#tabbar button").forEach(b=>b.onclick=()=>{
+  $$("#tabbar button").forEach(x=>x.classList.toggle("on",x===b));
+  $$(".view").forEach(v=>v.classList.toggle("active",v.id==="view-"+b.dataset.view));
+  if(b.dataset.view==="saved") renderSaved();
+  if(b.dataset.view==="setup") renderStorageInfo();
+});
+
+/* ================= TTS ================= */
+let voices=[];
+function loadVoices(){ voices=speechSynthesis.getVoices()||[]; }
+if("speechSynthesis" in window){ loadVoices(); speechSynthesis.onvoiceschanged=loadVoices; }
+function speak(text,langCode,rate=1){
+  if(!("speechSynthesis" in window)||!text) return;
+  try{
+    speechSynthesis.cancel();
+    const u=new SpeechSynthesisUtterance(text);
+    const L=langBy(langCode);
+    u.lang=L.code; u.rate=rate;
+    const pref=L.tts.toLowerCase();
+    const v=voices.find(v=>v.lang.toLowerCase()===L.code.toLowerCase())
+        ||voices.find(v=>v.lang.toLowerCase().startsWith(pref));
+    if(v) u.voice=v;
+    speechSynthesis.speak(u);
+  }catch(e){}
+}
+
+/* ================= CACHE / HISTORY / FAVORITES ================= */
+let CACHE=store.get("cache",{});      // key -> result
+let HIST=store.get("history",[]);     // newest first
+let FAVS=store.get("favs",[]);
+let CUSTOM=store.get("custom",[]);    // user phrases
+const cacheKey=(src,tgt,form,text)=>src+"|"+tgt+"|"+form+"|"+norm(text).toLowerCase();
+function saveCache(){ 
+  const keys=Object.keys(CACHE);
+  if(keys.length>1200){ keys.slice(0,keys.length-1000).forEach(k=>delete CACHE[k]); }
+  store.set("cache",CACHE);
+}
+function pushHist(item){
+  HIST.unshift(item); if(HIST.length>400) HIST.length=400; store.set("history",HIST);
+}
+
+/* ================= TRANSLATION ENGINE ================= */
+function buildPrompt(text,srcL,tgtL){
+  const style=S.formality==="casual"
+    ?"casual, friendly register (informal pronouns where the language has them)"
+    :"polite, respectful register (formal pronouns/honorifics where the language has them)";
+  const romNote=tgtL.rom?` "romanization": ${tgtL.rom==="pinyin"?"Hanyu Pinyin with tone marks":"standard romanization"} of the translation.`:"";
+  const detect=S.autoDetect
+    ?`First decide whether the text is ${srcL.name} or ${tgtL.name}; translate INTO the other one and set "detected" to the language code of the input ("${srcL.code}" or "${tgtL.code}").`
+    :`The text is in ${srcL.name}. Translate it into ${tgtL.name}. Set "detected" to "${srcL.code}".`;
+  const extra=S.explain
+    ?`Also include "literal": a word-for-word gloss in English, and "note": ONE short line of cultural/usage guidance for a traveler.`
+    :`Set "literal" and "note" to "".`;
+  return `You are a professional live interpreter helping a traveler. ${detect}
+Produce a NATURAL, idiomatic translation — exactly how a local would actually say it in this situation, never a stiff dictionary rendering. Use a ${style}. Keep names, numbers and amounts intact.
+${extra}
+Respond with ONLY a JSON object, no markdown, no commentary:
+{"translation":"...","romanization":"...","literal":"...","note":"...","detected":"..."}${romNote}
+Text: """${text}"""`;
+}
+async function callAPI(prompt){
+  const r=await fetch(S.endpoint,{
+    method:"POST",
+    headers:{"Content-Type":"application/json","Authorization":"Bearer "+S.key},
+    body:JSON.stringify({model:S.model,max_tokens:600,temperature:0.3,
+      messages:[{role:"user",content:prompt}]})
+  });
+  if(!r.ok){ let d=""; try{d=(await r.json()).error?.message||"";}catch(e){} throw new Error("API "+r.status+(d?": "+d.slice(0,120):"")); }
+  const data=await r.json();
+  let txt=data.choices?.[0]?.message?.content ?? "";
+  txt=txt.replace(/```json|```/g,"").trim();
+  const m=txt.match(/\{[\s\S]*\}/); if(m) txt=m[0];
+  const j=JSON.parse(txt);
+  if(!j.translation) throw new Error("Empty translation");
+  return j;
+}
+async function translate(text,srcCode,tgtCode){
+  const srcL=langBy(srcCode), tgtL=langBy(tgtCode);
+  const key=cacheKey(srcCode,tgtCode,S.formality+(S.explain?"+x":""),text);
+  if(CACHE[key]) return Object.assign({cached:true},CACHE[key]);
+  if(!navigator.onLine) throw new Error("offline");
+  if(!S.key) throw new Error("nokey");
+  const res=await callAPI(buildPrompt(text,srcL,tgtL));
+  // auto-detect may flip direction
+  let from=srcCode,to=tgtCode;
+  if(S.autoDetect && res.detected && res.detected!==srcCode && (res.detected===tgtCode)){ from=tgtCode; to=srcCode; }
+  const out={translation:norm(res.translation),romanization:norm(res.romanization),literal:norm(res.literal),note:norm(res.note),from,to,src:norm(text),ts:Date.now()};
+  CACHE[key]=out; saveCache();
+  return out;
+}
+
+/* ================= TALK VIEW ================= */
+let speaker="A";            // whose turn: A = you, B = them
+let lastExchange=null;      // last completed translation
+function langA(){return langBy(S.langA);} function langB(){return langBy(S.langB);}
+function refreshLangButtons(){
+  $("#langBtnA").textContent=langA().native+" · "+langA().name;
+  $("#langBtnB").textContent=langB().native+" · "+langB().name;
+  $("#speakerLabel").textContent=speaker==="A"?"You speak":"They speak";
+  $("#micToB").textContent=speaker==="B"?"🎙 Your turn":"🎙 They speak";
+}
+function setSpeaker(sp,quiet){
+  speaker=sp; refreshLangButtons();
+  if(!quiet) toast(sp==="A"?"Listening for "+langA().name:"Listening for "+langB().name,1400);
+  if(rec.armed) rec.restartWithLang(curLang().code);
+}
+const curLang=()=>speaker==="A"?langA():langB();
+const otherLang=()=>speaker==="A"?langB():langA();
+
+function sideBody(which){ return which==="A"?$("#bodyA"):$("#bodyB"); }
+function renderInterim(text){
+  const el=sideBody(speaker);
+  el.innerHTML=`<div class="interim"><div class="bigline">${esc(text)}…</div></div>`;
+}
+function clearInterim(){
+  const el=sideBody(speaker);
+  if(el.querySelector(".interim")) el.innerHTML=`<div class="side-empty">…</div>`;
+}
+function renderExchange(x){
+  lastExchange=x;
+  const toThem = x.to===S.langB;   // translation belongs on their side?
+  const trBody = toThem? $("#bodyB") : $("#bodyA");
+  const srcBody= toThem? $("#bodyA") : $("#bodyB");
+  trBody.innerHTML=`<div class="bigline">${esc(x.translation)}</div>`+
+    (x.romanization?`<div class="romline">${esc(x.romanization)}</div>`:"")+
+    `<div class="subline">“${esc(x.src)}”</div>`;
+  let extra="";
+  if(S.explain&&(x.literal||x.note)){
+    extra=`<div class="explainCard">`+
+      (x.literal?`<div class="xr"><b>Literal:</b> ${esc(x.literal)}</div>`:"")+
+      (x.note?`<div class="xr"><b>Note:</b> ${esc(x.note)}</div>`:"")+`</div>`;
+  }
+  srcBody.innerHTML=`<div class="bigline" style="font-size:clamp(17px,4.6vw,24px)">${esc(x.src)}</div>
+    <div class="subline">→ ${esc(x.translation)}</div>${extra}`;
+  status(x.cached?"⚡ Instant (from cache)":"Translated",false);
+}
+function status(msg,err){ const el=$("#talkStatus"); el.textContent=msg; el.className=err==="warn"?"warn":(err?"err":""); el.id="talkStatus"; }
+
+async function handleUtterance(text){
+  text=norm(text); if(!text) return;
+  if(S.review){ openReview(text); return; }
+  await doTranslate(text);
+}
+async function doTranslate(text){
+  const from=curLang().code, to=otherLang().code;
+  status("Translating…");
+  try{
+    const x=await translate(text,from,to);
+    x.src=x.src||text;
+    renderExchange(x);
+    pushHist({src:x.src,tr:x.translation,rom:x.romanization||"",from:x.from,to:x.to,ts:Date.now()});
+    if(S.speak) speak(x.translation,x.to);
+    if(S.autoSwitch) setSpeaker(speaker==="A"?"B":"A",true), refreshLangButtons();
+  }catch(e){
+    if(e.message==="offline") status("Offline — new translations need internet. Phrasebook & cache still work.","warn");
+    else if(e.message==="nokey") status("Add your API key in Setup → Translation engine",true), toast("No API key yet — open Setup");
+    else status("Translation failed: "+e.message.slice(0,90),true);
+  }
+}
+
+/* ================= SPEECH RECOGNITION (iOS-safe) ================= */
+const SRClass=window.SpeechRecognition||window.webkitSpeechRecognition;
+const rec={
+  obj:null, armed:false, ptt:false, processing:false,
+  silenceT:null, restartT:null, lastText:"", errCount:0,
+  supported:!!SRClass,
+  build(lang){
+    if(this.obj){ try{this.obj.onend=null;this.obj.abort();}catch(e){} }
+    const r=new SRClass();
+    r.lang=lang; r.interimResults=true; r.continuous=false; r.maxAlternatives=1;
+    r.onresult=(ev)=>{
+      let txt="";
+      for(let i=0;i<ev.results.length;i++) txt+=ev.results[i][0].transcript;
+      txt=norm(txt);
+      // runaway-transcript guard (iOS bug: transcript keeps duplicating/growing)
+      if(txt.length>420){ this.lastText=txt.slice(0,420); this.finalize(); return; }
+      this.lastText=txt;
+      renderInterim(txt);
+      status(this.ptt?"Listening… release to send":"Listening… (pause to send)");
+      clearTimeout(this.silenceT);
+      if(!this.ptt) this.silenceT=setTimeout(()=>this.finalize(),1300);
+    };
+    r.onend=()=>{
+      clearTimeout(this.silenceT);
+      if(this.lastText && !this.processing){ this.finalize(true); return; }
+      if(this.armed && !this.processing){ this.scheduleRestart(); }
+      else if(!this.armed && !this.ptt) status("Tap the mic to start listening");
+    };
+    r.onerror=(ev)=>{
+      clearTimeout(this.silenceT);
+      if(ev.error==="not-allowed"||ev.error==="service-not-allowed"){
+        this.disarm(); status("Mic blocked — allow microphone access for Safari in iPhone Settings",true);
+      }else if(ev.error==="no-speech"){ /* silent gap; onend will restart */ }
+      else if(ev.error==="network"){ status("Speech recognition needs internet — try typing instead","warn"); this.disarm(); }
+      else{ this.errCount++; if(this.errCount>4){ this.disarm(); status("Mic kept failing — use Hold-to-talk or type",true);} }
+    };
+    this.obj=r; return r;
+  },
+  startOnce(lang){
+    if(!this.supported){ status("Speech recognition unavailable here — type below instead","warn"); return false; }
+    if(!navigator.onLine){ status("Offline — the mic needs internet. Phrasebook & typing still work.","warn"); return false; }
+    try{ this.build(lang).start(); return true; }
+    catch(e){ this.scheduleRestart(); return true; }
+  },
+  scheduleRestart(){
+    clearTimeout(this.restartT);
+    this.restartT=setTimeout(()=>{ if(this.armed&&!this.processing) this.startOnce(curLang().code); },300);
+  },
+  restartWithLang(lang){ if(this.armed){ this.lastText=""; try{this.obj&&this.obj.abort();}catch(e){} setTimeout(()=>this.armed&&this.startOnce(lang),250); } },
+  arm(){
+    if(!this.startOnce(curLang().code)) return;
+    this.armed=true; this.errCount=0;
+    $("#micBtn").classList.add("armed"); $("#micBtn").textContent="⏹";
+    document.getElementById("side"+speaker).classList.add("speaking");
+    status("Listening for "+curLang().name+"… speak naturally");
+  },
+  disarm(){
+    this.armed=false; clearTimeout(this.silenceT); clearTimeout(this.restartT);
+    try{ this.obj&&this.obj.abort(); }catch(e){}
+    $("#micBtn").classList.remove("armed"); $("#micBtn").textContent="🎙";
+    $$(".side").forEach(s=>s.classList.remove("speaking"));
+  },
+  async finalize(fromEnd){
+    clearTimeout(this.silenceT);
+    const text=this.lastText; this.lastText="";
+    if(!fromEnd){ try{this.obj&&this.obj.stop();}catch(e){} }
+    if(!text){ if(this.armed) this.scheduleRestart(); return; }
+    this.processing=true;
+    try{ await handleUtterance(text); }
+    finally{
+      this.processing=false;
+      if(this.armed) this.scheduleRestart();
+      else if(this.ptt){ this.ptt=false; }
+    }
+  }
+};
+
+$("#micBtn").onclick=()=>{ rec.armed?rec.disarm():rec.arm(); if(!rec.armed&&!rec.supported){} };
+/* push-to-talk */
+const ptt=$("#pttBtn");
+function pttDown(e){ e.preventDefault();
+  if(rec.armed) rec.disarm();
+  rec.ptt=true; ptt.classList.add("holding");
+  if(!rec.startOnce(curLang().code)){ rec.ptt=false; ptt.classList.remove("holding"); }
+  else status("Listening… release to send");
+}
+function pttUp(e){ e.preventDefault();
+  if(!rec.ptt) return;
+  ptt.classList.remove("holding");
+  try{ rec.obj&&rec.obj.stop(); }catch(err){}
+  setTimeout(()=>{ if(rec.lastText) rec.finalize(true); rec.ptt=false; },350);
+}
+ptt.addEventListener("touchstart",pttDown,{passive:false});
+ptt.addEventListener("touchend",pttUp);
+ptt.addEventListener("touchcancel",pttUp);
+ptt.addEventListener("mousedown",pttDown);
+ptt.addEventListener("mouseup",pttUp);
+
+/* typed input */
+function sendTyped(){
+  const v=norm($("#typeInput").value); if(!v) return;
+  $("#typeInput").value=""; doTranslate(v);
+}
+$("#typeSend").onclick=sendTyped;
+$("#typeInput").addEventListener("keydown",e=>{ if(e.key==="Enter") sendTyped(); });
+
+/* speaker + swap */
+$("#speakerToggle").onclick=()=>setSpeaker(speaker==="A"?"B":"A");
+$("#micToB").onclick=()=>setSpeaker(speaker==="A"?"B":"A");
+$("#swapBtn").onclick=()=>{ const t=S.langA; S.langA=S.langB; S.langB=t; saveS(); refreshLangButtons(); renderPhrases(); toast("Languages swapped"); if(rec.armed) rec.restartWithLang(curLang().code); };
+
+/* replay / slow */
+function playLast(which,rate){
+  if(!lastExchange){ toast("Nothing to replay yet"); return; }
+  const x=lastExchange;
+  const onB = x.to===S.langB;
+  const text = (which==="B")===onB ? x.translation : x.src;
+  const lang = (which==="B")===onB ? x.to : x.from;
+  speak(text,lang,rate);
+}
+$("#replayA").onclick=()=>playLast("A",1); $("#slowA").onclick=()=>playLast("A",0.55);
+$("#replayB").onclick=()=>playLast("B",1); $("#slowB").onclick=()=>playLast("B",0.55);
+$("#explainBtn").onclick=()=>{ S.explain=!S.explain; saveS(); $("#setExplain").checked=S.explain; toast(S.explain?"Explain mode ON — next translations include gloss + note":"Explain mode off"); };
+
+/* ================= SHOW THEM ================= */
+function openShowThem(text,rom,lang){
+  $("#stText").textContent=text; $("#stRom").textContent=rom||"";
+  $("#showThem").classList.add("open");
+  $("#showThem").dataset.lang=lang||S.langB;
+}
+$("#showThemBtn").onclick=()=>{
+  if(!lastExchange){ toast("Translate something first"); return; }
+  openShowThem(lastExchange.translation,lastExchange.romanization,lastExchange.to);
+};
+$("#stClose").onclick=()=>$("#showThem").classList.remove("open");
+$("#stFlip").onclick=()=>$("#showThem").classList.toggle("flipped");
+$("#stSpeak").onclick=()=>speak($("#stText").textContent,$("#showThem").dataset.lang,0.9);
+
+/* ================= REVIEW MODAL ================= */
+function openReview(text){ $("#reviewText").value=text; $("#reviewModal").classList.add("open"); }
+$("#reviewCancel").onclick=()=>$("#reviewModal").classList.remove("open");
+$("#reviewSend").onclick=()=>{ const v=norm($("#reviewText").value); $("#reviewModal").classList.remove("open"); if(v) doTranslate(v); };
+
+/* ================= LANGUAGE PICKER ================= */
+let pickTarget="A";
+function openLangPicker(t){
+  pickTarget=t;
+  $("#langModalTitle").textContent=t==="A"?"Your language":"Their language";
+  $("#langList").innerHTML=LANGS.map(l=>{
+    const cur=(t==="A"?S.langA:S.langB)===l.code;
+    return `<button class="btn slim" style="margin-bottom:8px;justify-content:space-between;${cur?"border-color:var(--them);color:var(--them)":""}" data-code="${l.code}">
+      <span>${esc(l.native)} · ${esc(l.name)}</span>${cur?"✓":""}</button>`;
+  }).join("");
+  $$("#langList button").forEach(b=>b.onclick=()=>{
+    if(pickTarget==="A") S.langA=b.dataset.code; else S.langB=b.dataset.code;
+    saveS(); refreshLangButtons(); renderPhrases();
+    $("#langModal").classList.remove("open");
+    if(rec.armed) rec.restartWithLang(curLang().code);
+  });
+  $("#langModal").classList.add("open");
+}
+$("#langBtnA").onclick=()=>openLangPicker("A");
+$("#langBtnB").onclick=()=>openLangPicker("B");
+$$(".modal").forEach(m=>m.addEventListener("click",e=>{ if(e.target===m) m.classList.remove("open"); }));
+
+/* ================= PHRASEBOOK ================= */
+let curCat="greet";
+function phraseTarget(){ // built-in book is EN⇄ZH; pick the side that's Mandarin, else show with note
+  return "zh-CN";
+}
+function allPhrases(){
+  const list=[];
+  PHRASES.forEach(([id,name,items])=>items.forEach((p,i)=>list.push({cat:id,catName:name,src:p[0],tr:p[1],rom:p[2],id:id+"_"+i})));
+  CUSTOM.forEach((p,i)=>list.push({cat:"mine",catName:"My phrases",src:p.src,tr:p.tr,rom:p.rom||"",id:"mine_"+i,custom:true,idx:i}));
+  return list;
+}
+function renderCats(){
+  const cats=[["greet","👋 Basics"],["sos","🚨 Emergency"],["med","💊 Medical"],["food","🍜 Food"],["dir","🚕 Directions"],["hotel","🏨 Hotel"],["shop","🛍 Shopping"],["num","💴 Numbers"],["mine","✏️ Mine"]];
+  $("#catRow").innerHTML=cats.map(([id,label])=>
+    `<button class="catChip ${id==="sos"?"sos":""} ${id===curCat?"on":""}" data-cat="${id}">${label}</button>`).join("");
+  $$("#catRow .catChip").forEach(b=>b.onclick=()=>{ curCat=b.dataset.cat; $("#phraseSearch").value=""; renderCats(); renderPhrases(); });
+}
+function phraseCard(p){
+  const favKey="ph:"+p.id;
+  const starred=FAVS.some(f=>f.key===favKey);
+  return `<div class="phrase" data-id="${p.id}">
+    <div class="grow">
+      <div class="p-src">${esc(p.src)}</div>
+      <div class="p-tr">${esc(p.tr)}</div>
+      ${p.rom?`<div class="p-rom">${esc(p.rom)}</div>`:""}
+    </div>
+    <button class="iconbtn ph-show" title="Show full screen">⤢</button>
+    <button class="iconbtn ph-play" title="Play">🔊</button>
+    <button class="iconbtn ph-star ${starred?"starred":""}" title="Favorite">${starred?"★":"☆"}</button>
+    ${p.custom?`<button class="iconbtn ph-del" title="Delete">🗑</button>`:""}
+  </div>`;
+}
+function renderPhrases(){
+  const q=norm($("#phraseSearch").value).toLowerCase();
+  let list=allPhrases();
+  if(q) list=list.filter(p=>(p.src+" "+p.tr+" "+p.rom).toLowerCase().includes(q));
+  else list=list.filter(p=>p.cat===curCat);
+  let html="";
+  if(curCat==="mine"&&!q){
+    html+=`<button class="btn good" style="margin-bottom:12px" id="addPhraseBtn">＋ Add a phrase</button>`;
+  }
+  html+= list.length? list.map(phraseCard).join("") :
+    `<div class="empty">${q?"No phrases match that search.":"Nothing here yet. Tap “＋ Add a phrase” to save your own."}</div>`;
+  html+=`<div class="hint" style="padding:6px 4px 20px">Built-in phrases are English ⇄ Mandarin with pinyin — fully offline. Star ☆ any phrase to pin it in Saved.</div>`;
+  $("#phraseList").innerHTML=html;
+  const byId=Object.fromEntries(list.map(p=>[p.id,p]));
+  $$("#phraseList .phrase").forEach(card=>{
+    const p=byId[card.dataset.id]; if(!p) return;
+    card.querySelector(".ph-play").onclick=()=>speak(p.tr,"zh-CN",0.9);
+    card.querySelector(".ph-show").onclick=()=>openShowThem(p.tr,p.rom,"zh-CN");
+    card.querySelector(".ph-star").onclick=(e)=>toggleFav({key:"ph:"+p.id,src:p.src,tr:p.tr,rom:p.rom,from:"en-US",to:"zh-CN"},e.currentTarget);
+    const del=card.querySelector(".ph-del");
+    if(del) del.onclick=()=>{ CUSTOM.splice(p.idx,1); store.set("custom",CUSTOM); renderPhrases(); toast("Phrase deleted"); };
+  });
+  const add=$("#addPhraseBtn"); if(add) add.onclick=()=>$("#addPhraseModal").classList.add("open");
+}
+$("#phraseSearch").addEventListener("input",renderPhrases);
+$("#apCancel").onclick=()=>$("#addPhraseModal").classList.remove("open");
+$("#apSave").onclick=()=>{
+  const src=norm($("#apSrc").value), tr=norm($("#apTr").value), rom=norm($("#apRom").value);
+  if(!src||!tr){ toast("Phrase and translation are both needed"); return; }
+  CUSTOM.push({src,tr,rom}); store.set("custom",CUSTOM);
+  $("#apSrc").value=$("#apTr").value=$("#apRom").value="";
+  $("#addPhraseModal").classList.remove("open"); curCat="mine"; renderCats(); renderPhrases(); toast("Saved to My phrases");
+};
+
+/* ================= FAVORITES / HISTORY ================= */
+function toggleFav(item,btn){
+  const i=FAVS.findIndex(f=>f.key===item.key);
+  if(i>=0){ FAVS.splice(i,1); toast("Removed from favorites"); }
+  else{ FAVS.unshift(item); toast("★ Saved to favorites"); }
+  store.set("favs",FAVS);
+  if(btn){ const on=i<0; btn.classList.toggle("starred",on); btn.textContent=on?"★":"☆"; }
+}
+let savedMode="fav";
+$$("#savedSeg button").forEach(b=>b.onclick=()=>{
+  savedMode=b.dataset.seg;
+  $$("#savedSeg button").forEach(x=>x.classList.toggle("on",x===b));
+  renderSaved();
+});
+function savedCard(it,isFav,idx){
+  const key=it.key||("h:"+cacheKey(it.from,it.to,"",it.src));
+  const starred=isFav||FAVS.some(f=>f.key===key);
+  return `<div class="hitem" data-i="${idx}">
+    <div class="h-src">${esc(it.src)}</div>
+    <div class="h-tr">${esc(it.tr)}</div>
+    ${it.rom?`<div class="h-rom">${esc(it.rom)}</div>`:""}
+    <div class="h-meta">${esc(langBy(it.from).name)} → ${esc(langBy(it.to).name)}${it.ts?` · ${new Date(it.ts).toLocaleDateString()}`:""}</div>
+    <div class="h-bar">
+      <button class="chipbtn h-show">⤢ Show</button>
+      <button class="chipbtn h-play">🔊 Play</button>
+      <button class="chipbtn h-star">${starred?"★ Saved":"☆ Save"}</button>
+    </div>
+  </div>`;
+}
+function renderSaved(){
+  const q=norm($("#histSearch").value).toLowerCase();
+  let list=savedMode==="fav"?FAVS:HIST;
+  const src=list.map((it,i)=>({it,i}));
+  const shown=q?src.filter(({it})=>(it.src+" "+it.tr+" "+(it.rom||"")).toLowerCase().includes(q)):src;
+  $("#savedList").innerHTML= shown.length
+    ? shown.map(({it,i})=>savedCard(it,savedMode==="fav",i)).join("")
+    : `<div class="empty">${savedMode==="fav"?"No favorites yet. Star ☆ phrases or history items and they'll live here — fully offline.":"No history yet. Every translation you make is kept here on-device."}</div>`;
+  $$("#savedList .hitem").forEach(card=>{
+    const i=+card.dataset.i; const it=(savedMode==="fav"?FAVS:HIST)[i]; if(!it) return;
+    card.querySelector(".h-show").onclick=()=>openShowThem(it.tr,it.rom||"",it.to);
+    card.querySelector(".h-play").onclick=()=>speak(it.tr,it.to,0.95);
+    card.querySelector(".h-star").onclick=()=>{
+      const key=it.key||("h:"+cacheKey(it.from,it.to,"",it.src));
+      toggleFav({key,src:it.src,tr:it.tr,rom:it.rom||"",from:it.from,to:it.to});
+      renderSaved();
+    };
+  });
+}
+$("#histSearch").addEventListener("input",renderSaved);
+
+/* ================= TOOLS: EMERGENCY ================= */
+const SOS_QUICK=[
+ ["Help!","救命！","jiùmìng!"],
+ ["Please call the police","请报警","qǐng bàojǐng"],
+ ["Please call an ambulance","请叫救护车","qǐng jiào jiùhùchē"],
+ ["I'm allergic — I need a doctor","我过敏了，需要医生","wǒ guòmǐn le, xūyào yīshēng"],
+ ["I'm lost — please help me","我迷路了，请帮帮我","wǒ mílù le, qǐng bāngbang wǒ"],
+];
+function renderSOS(){
+  $("#sosButtons").innerHTML=SOS_QUICK.map((p,i)=>
+    `<button class="sosBig" data-i="${i}"><span style="font-size:24px">🚨</span>
+      <span class="grow"><span class="s1">${esc(p[1])}</span><br><span class="s2">${esc(p[0])} · ${esc(p[2])}</span></span></button>`).join("");
+  $$("#sosButtons .sosBig").forEach(b=>b.onclick=()=>{
+    const p=SOS_QUICK[+b.dataset.i];
+    openShowThem(p[1],p[2],"zh-CN"); speak(p[1],"zh-CN",0.85);
+  });
+  $("#sosNums").innerHTML=[["110","Police"],["120","Ambulance"],["119","Fire"]]
+    .map(([n,l])=>`<a href="tel:${n}"><b>${n}</b><span>${l} (China)</span></a>`).join("");
+}
+$("#localSOS").addEventListener("change",e=>{ S.localSOS=e.target.value; saveS(); });
+$("#myContact").addEventListener("change",e=>{ S.myContact=e.target.value; saveS(); });
+
+/* ================= TOOLS: CURRENCY ================= */
+function fxRender(){
+  $("#fxFromLbl").textContent=`Amount (${S.fxFrom})`;
+  $("#fxRateLbl").textContent=`Rate: 1 ${S.fxFrom} = ? ${S.fxTo} (edit anytime)`;
+  $("#fxRate").value=S.fxRate;
+  const amt=parseFloat($("#fxAmount").value)||0;
+  const out=amt*S.fxRate;
+  const fmt=n=>n.toLocaleString(undefined,{maximumFractionDigits:2});
+  const quick=[10,50,100,500].map(q=>`<div class="fx-out"><span class="u">${q} ${S.fxFrom}</span><span class="v">${fmt(q*S.fxRate)} ${S.fxTo}</span></div>`).join("");
+  $("#fxResults").innerHTML=
+    `<div class="fx-out"><span class="u">${fmt(amt)} ${S.fxFrom} =</span><span class="v" style="color:var(--them)">${fmt(out)} ${S.fxTo}</span></div>`+quick;
+  $("#fxStamp").textContent=S.fxStamp?`Rate last updated ${new Date(S.fxStamp).toLocaleDateString()} — offline-safe.`:"Uses the last rate you entered — no internet needed.";
+}
+$("#fxAmount").addEventListener("input",fxRender);
+$("#fxRate").addEventListener("change",e=>{ const v=parseFloat(e.target.value); if(v>0){ S.fxRate=v; S.fxStamp=Date.now(); saveS(); } fxRender(); });
+$("#fxSwap").onclick=()=>{ const t=S.fxFrom; S.fxFrom=S.fxTo; S.fxTo=t; S.fxRate=S.fxRate>0?+(1/S.fxRate).toFixed(6):1; S.fxStamp=Date.now(); saveS(); fxRender(); };
+
+/* ================= SETUP BINDINGS ================= */
+function bindSetup(){
+  $("#setEndpoint").value=S.endpoint; $("#setKey").value=S.key; $("#setModel").value=S.model;
+  $("#setExplain").checked=S.explain; $("#setAutoSwitch").checked=S.autoSwitch;
+  $("#setAutoDetect").checked=S.autoDetect; $("#setReview").checked=S.review; $("#setSpeak").checked=S.speak;
+  $("#localSOS").value=S.localSOS; $("#myContact").value=S.myContact;
+  $$("#formalSeg button").forEach(b=>b.classList.toggle("on",b.dataset.v===S.formality));
+  $("#setEndpoint").addEventListener("change",e=>{S.endpoint=norm(e.target.value)||DEF.endpoint;saveS();});
+  $("#setKey").addEventListener("change",e=>{S.key=norm(e.target.value);saveS();});
+  $("#setModel").addEventListener("change",e=>{S.model=norm(e.target.value)||DEF.model;saveS();});
+  [["setExplain","explain"],["setAutoSwitch","autoSwitch"],["setAutoDetect","autoDetect"],["setReview","review"],["setSpeak","speak"]]
+    .forEach(([id,key])=>$("#"+id).addEventListener("change",e=>{S[key]=e.target.checked;saveS();}));
+  $$("#formalSeg button").forEach(b=>b.onclick=()=>{ S.formality=b.dataset.v; saveS();
+    $$("#formalSeg button").forEach(x=>x.classList.toggle("on",x===b)); toast("Register: "+S.formality); });
+  $("#testApi").onclick=async()=>{
+    const out=$("#testResult");
+    if(!navigator.onLine){ out.textContent="You're offline — connect to test."; return; }
+    if(!S.key){ out.textContent="Paste an API key first."; return; }
+    out.textContent="Testing…";
+    try{ const j=await callAPI('Reply with ONLY this JSON: {"translation":"ok","romanization":"","literal":"","note":"","detected":"en-US"}');
+      out.textContent=j.translation?"✅ Connected — model responded.":"⚠️ Connected, but response looked odd."; }
+    catch(e){ out.textContent="❌ "+e.message.slice(0,140); }
+  };
+  $("#clearCache").onclick=()=>{ CACHE={}; store.set("cache",CACHE); renderStorageInfo(); toast("Translation cache cleared"); };
+  $("#clearAll").onclick=()=>{
+    if(!confirm("Erase ALL TableTalk data on this phone — settings, key, history, favorites, custom phrases?")) return;
+    Object.keys(localStorage).filter(k=>k.startsWith("tt_")).forEach(k=>localStorage.removeItem(k));
+    location.reload();
+  };
+}
+function renderStorageInfo(){
+  let bytes=0; Object.keys(localStorage).forEach(k=>{ if(k.startsWith("tt_")) bytes+=(localStorage.getItem(k)||"").length*2; });
+  $("#storageInfo").textContent=`${Object.keys(CACHE).length} cached translations · ${HIST.length} history · ${FAVS.length} favorites · ${CUSTOM.length} custom phrases · ~${(bytes/1024).toFixed(0)} KB used`;
+}
+
+/* ================= INIT ================= */
+applyTheme(); updateNet(); refreshLangButtons(); renderCats(); renderPhrases();
+renderSOS(); fxRender(); bindSetup();
+if(!rec.supported){
+  status("Speech recognition isn't available in this browser — typed input, phrasebook & TTS all work.","warn");
+}
+if(!S.key){ toast("Welcome! Add your API key in Setup to unlock live translation.",3400); }
+// keep TTS voices warm on iOS
+setTimeout(loadVoices,600);
+
+})();
+</script>
+</body>
+</html>
